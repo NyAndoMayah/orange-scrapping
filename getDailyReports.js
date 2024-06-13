@@ -24,24 +24,32 @@ async function login(page) {
   console.log('Logged in successfully.');
 }
 
-async function checkDailyReports(page) {
+async function visitDailyReportsPage(page) {
   console.log('Checking for the "Daily/" link');
   await page.waitForSelector('a[href="./_Daily/"]');
   console.log('"Daily/" link found');
   await page.click('a[href="./_Daily/"]');
 }
 
+async function convertToXls(response) {
+  const buffer = await response.arrayBuffer();
+
+  const workbook = xlsx.read(buffer, { type: 'array' });
+  const jsonData = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+  return jsonData;
+}
+
 async function downloadDailyReports(selectorDate) {
   const downloadSelector = `a[href="./Daily-ChannelUserTransactionReport-0328965189-${selectorDate}.xls"]`;
 
-  // Use Puppeteer to get the download link
   const browser = await launch({
     headless: false
   });
   const page = await browser.newPage();
   
   await login(page);
-  await checkDailyReports(page);
+  await visitDailyReportsPage(page);
 
   const cookies = await page.cookies();
   const cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
@@ -59,12 +67,9 @@ async function downloadDailyReports(selectorDate) {
     'Cookie' : cookieString
   }});
 
-  const buffer = await response.arrayBuffer();
+  console.log('File downloaded successfully');
   
-  const workbook = xlsx.read(buffer, { type: 'array' });
-  const jsonData = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-
-  return jsonData;
+  return await convertToXls(response);
 }
 
 async function getDailyReports(selectorDate) {
