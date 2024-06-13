@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import xlsx from 'xlsx';
 import fetch from 'node-fetch';
-import {launch} from 'puppeteer';
+import { launch } from 'puppeteer';
 
 dotenv.config();
 
@@ -20,7 +20,7 @@ async function login(page) {
     page.click('button[type="submit"]'),
     page.waitForNavigation({ waitUntil: 'networkidle0' }),
   ]);
-  
+
   console.log('Logged in successfully.');
 }
 
@@ -31,7 +31,7 @@ async function visitDailyReportsPage(page) {
   await page.click('a[href="./_Daily/"]');
 }
 
-async function convertToXls(response) {
+async function convertToJson(response) {
   const buffer = await response.arrayBuffer();
 
   const workbook = xlsx.read(buffer, { type: 'array' });
@@ -47,7 +47,7 @@ async function downloadDailyReports(selectorDate) {
     headless: false
   });
   const page = await browser.newPage();
-  
+
   await login(page);
   await visitDailyReportsPage(page);
 
@@ -63,23 +63,50 @@ async function downloadDailyReports(selectorDate) {
 
   console.log('Fetching the file from the download link', downloadLink);
 
-  const response = await fetch(downloadLink, {headers: {
-    'Cookie' : cookieString
-  }});
+  const response = await fetch(downloadLink, {
+    headers: {
+      'Cookie': cookieString
+    }
+  });
 
   console.log('File downloaded successfully');
-  
-  return await convertToXls(response);
+
+  return response;
 }
 
 async function getDailyReports(selectorDate) {
   try {
-    const jsonData = await downloadDailyReports(selectorDate);
-    console.log('XLS file converted to JSON successfully.');
-    return jsonData;
+    const response = await downloadDailyReports(selectorDate);
+    const jsonData = await convertToJson(response);
+
+    const transactionData = [];
+
+
+  // let i = 18 because the valid transaction must start there
+    for (let i = 18; i < jsonData.length; i++) {
+      const row = jsonData[i];
+
+      const requiredAttributes = ['__EMPTY_1', '__EMPTY_2', '__EMPTY_3', '__EMPTY_4', '__EMPTY_6', '__EMPTY_11', '__EMPTY_14'];
+
+      if (requiredAttributes.every(attr => attr in row)) {
+        const transaction = {
+          number: row.__EMPTY,
+          date: row.__EMPTY_1,
+          time: row.__EMPTY_2,
+          ref: row.__EMPTY_3,
+          status: row.__EMPTY_6,
+          client_number: row.__EMPTY_11,
+          amount: parseFloat(row.__EMPTY_14)
+        };
+        transactionData.push(transaction);
+      }
+    }
+
+    return transactionData;
   } catch (error) {
     console.error('Error:', error);
   }
 }
+
 
 export default getDailyReports;
