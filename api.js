@@ -1,15 +1,12 @@
 import express from 'express';
-import path from 'path';
-import fs from 'fs';
 import dayjs from 'dayjs';
-import {fileURLToPath} from 'url';
-import { getXls } from './getXls.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import cors from 'cors';
+import getDailyReports from './getDailyReports.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.use(cors());
 
 app.get('/transactions', async (req, res) => {
   try {
@@ -23,16 +20,12 @@ app.get('/transactions', async (req, res) => {
 
     console.log(`Fetching transactions for date: ${formattedDate}`);
 
-    await getXls(formattedDate);
-
-    const downloadPath = path.resolve(__dirname, 'downloads');
-    const jsonFilePath = path.join(downloadPath, 'data.json');
-    const jsonData = fs.readFileSync(jsonFilePath, 'utf-8');
-
-    const currentDate = new Date();
+    const response = await getDailyReports(formattedDate);
+    
     res.json({
-      timestamp: currentDate.toISOString(),
-      transactions: JSON.parse(jsonData),
+      transactionDate: date,
+      timestamp: new Date().toISOString(),
+      transactions: response,
     });
   } catch (error) {
     console.error('Error:', error);
