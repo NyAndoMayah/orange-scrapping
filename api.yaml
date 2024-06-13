@@ -1,0 +1,90 @@
+openapi: 3.0.0
+info:
+  title: Orange Money Daily Transaction API
+  description: API for retrieving daily transaction reports from Orange Money
+  version: 1.0.0
+servers:
+  - url: https://example.com/api/v1
+paths:
+  /transactions:
+    get:
+      summary: Get daily transaction reports
+      parameters:
+        - name: date
+          in: query
+          description: Date of the daily report in the format YYYY-MM-DDT00:00:00.000Z
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyTransaction'
+        '400':
+          description: Bad request. The date parameter is missing or invalid.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message explaining the reason for the bad request
+                    example: "The date parameter is missing."
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message indicating an internal server error
+                    example: "Internal server error"
+components:
+  schemas:
+    DailyTransaction:
+      type: object
+      properties:
+        transactionDate:
+          type: string
+          format: date-time
+          description: Date of the transactions
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of when the response was generated
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+    Transaction:
+      type: object
+      properties:
+        number:
+          type: integer
+          description: Transaction number
+        date:
+          type: string
+          format: date
+          description: Date of the transaction
+        time:
+          type: string
+          description: Time of the transaction
+        ref:
+          type: string
+          description: Reference of the transaction
+        status:
+          type: string
+          description: Status of the transaction
+        client_number:
+          type: string
+          description: Client number
+        amount:
+          type: number
+          description: Amount of the transaction
