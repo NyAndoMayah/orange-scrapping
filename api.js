@@ -1,7 +1,8 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
+import dayjs from 'dayjs';
+import {fileURLToPath} from 'url';
 import { getXls } from './getXls.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -12,7 +13,17 @@ const PORT = process.env.PORT || 3000;
 
 app.get('/transactions', async (req, res) => {
   try {
-    await getXls();
+    const { date } = req.query;
+    
+    if (!date) {
+      return res.status(400).json({ error: 'Date is required' });
+    }
+
+    const formattedDate = dayjs(date).format('YYYYMMDD');
+
+    console.log(`Fetching transactions for date: ${formattedDate}`);
+
+    await getXls(formattedDate);
 
     const downloadPath = path.resolve(__dirname, 'downloads');
     const jsonFilePath = path.join(downloadPath, 'data.json');
@@ -21,7 +32,7 @@ app.get('/transactions', async (req, res) => {
     const currentDate = new Date();
     res.json({
       timestamp: currentDate.toISOString(),
-      transactions: JSON.parse(jsonData)
+      transactions: JSON.parse(jsonData),
     });
   } catch (error) {
     console.error('Error:', error);

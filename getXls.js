@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import xlsx from 'xlsx';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,11 +35,19 @@ async function checkDailyReports(page) {
   await page.click('a[href="./_Daily/"]');
 }
 
-async function downloadDailyReports(page) {
+async function downloadDailyReports(page, selectorDate) {
   const downloadPath = path.resolve(__dirname, 'downloads');
 
+  if (!fs.existsSync(downloadPath)) {
+    fs.mkdirSync(downloadPath, { recursive: true });
+  }
+
+  console.log('Setting download behavior');
+  const client = await page.target().createCDPSession();
+  await client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadPath });
+
   console.log('Waiting for the download link');
-  const downloadSelector = 'a[href^="./Daily-ChannelUserTransactionReport-"][href$=".xls"]';
+  const downloadSelector = `a[href="./Daily-ChannelUserTransactionReport-0328965189-${selectorDate}.xls"]`;
   await page.waitForSelector(downloadSelector, { timeout: 60000 });
 
   const downloadLink = await page.$(downloadSelector);
@@ -62,6 +70,7 @@ async function downloadDailyReports(page) {
   }
 }
 
+
 async function convertXlsToJson() {
   const downloadPath = path.resolve(__dirname, 'downloads');
 
@@ -82,7 +91,7 @@ async function convertXlsToJson() {
   console.log('XLS file converted to JSON successfully.');
 }
 
-async function getXls() {
+async function getXls(selectorDate) {
   const browser = await puppeteer.launch({
     headless: false
   });
@@ -92,7 +101,7 @@ async function getXls() {
   try {
     await login(page);
     await checkDailyReports(page);
-    await downloadDailyReports(page);
+    await downloadDailyReports(page, selectorDate);
     await convertXlsToJson();
   } catch (error) {
     console.error('Error:', error);
