@@ -31,9 +31,7 @@ async function visitDailyReportsPage(page) {
   await page.click('a[href="./_Daily/"]');
 }
 
-async function convertToJson(response) {
-  const buffer = await response.arrayBuffer();
-
+const convertToJSON = (buffer) => {
   const workbook = xlsx.read(buffer, { type: 'array' });
   const jsonData = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
@@ -71,42 +69,46 @@ async function downloadDailyReports(selectorDate) {
 
   console.log('File downloaded successfully');
 
-  return response;
+  return response.arrayBuffer();
+}
+
+const isRowValid = (row) => {
+  const requiredAttributes = ['__EMPTY_1', '__EMPTY_2', '__EMPTY_3', '__EMPTY_4', '__EMPTY_6', '__EMPTY_11', '__EMPTY_14'];
+
+  return requiredAttributes.every(attr => attr in row);
+}
+const normalizeTransactions = (jsonData) => {
+  const transactions = [];
+
+  // let i = 18 because the valid transaction must start there
+  for (let i = 18; i < jsonData.length; i++) {
+    const row = jsonData[i];
+
+    if (isRowValid(row)) {
+      const transaction = {
+        number: row.__EMPTY,
+        date: row.__EMPTY_1,
+        time: row.__EMPTY_2,
+        ref: row.__EMPTY_3,
+        status: row.__EMPTY_6,
+        client_number: row.__EMPTY_11,
+        amount: parseFloat(row.__EMPTY_14)
+      };
+      transactions.push(transaction);
+    }
+  }
+  return transactions;
 }
 
 async function getDailyReports(selectorDate) {
   try {
-    const response = await downloadDailyReports(selectorDate);
-    const jsonData = await convertToJson(response);
+    const reportBuf = await downloadDailyReports(selectorDate);
+    const reportJSON = convertToJSON(reportBuf);
 
-    const transactionData = [];
-
-
-  // let i = 18 because the valid transaction must start there
-    for (let i = 18; i < jsonData.length; i++) {
-      const row = jsonData[i];
-
-      const requiredAttributes = ['__EMPTY_1', '__EMPTY_2', '__EMPTY_3', '__EMPTY_4', '__EMPTY_6', '__EMPTY_11', '__EMPTY_14'];
-
-      if (requiredAttributes.every(attr => attr in row)) {
-        const transaction = {
-          number: row.__EMPTY,
-          date: row.__EMPTY_1,
-          time: row.__EMPTY_2,
-          ref: row.__EMPTY_3,
-          status: row.__EMPTY_6,
-          client_number: row.__EMPTY_11,
-          amount: parseFloat(row.__EMPTY_14)
-        };
-        transactionData.push(transaction);
-      }
-    }
-
-    return transactionData;
+    return normalizeTransactions(reportJSON);
   } catch (error) {
     console.error('Error:', error);
   }
 }
-
 
 export default getDailyReports;

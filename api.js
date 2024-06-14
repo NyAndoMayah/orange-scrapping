@@ -21,12 +21,17 @@ app.get('/transactions', async (req, res) => {
     console.log(`Fetching transactions for date: ${formattedDate}`);
 
     const response = await getDailyReports(formattedDate);
-    
-    res.json({
-      transactionDate: date,
-      timestamp: new Date().toISOString(),
-      transactions: response,
-    });
+
+    if(response){
+      res.json({
+        transactionDate: date,
+        timestamp: new Date().toISOString(),
+        transactions: response,
+      });
+    }else{
+      res.status(500).json({ error: 'Unable to get the transactions.' });
+    }
+
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
