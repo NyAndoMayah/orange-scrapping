@@ -1,13 +1,14 @@
 import dotenv from 'dotenv';
 import xlsx from 'xlsx';
 import fetch from 'node-fetch';
-import { launch } from 'puppeteer';
+import {launch} from "puppeteer"
 
 dotenv.config();
 
 
 async function login(page) {
   await page.goto('https://madagascar.orange-money.com/grweb/');
+  console.log("try to log")
 
   if (!process.env.hasOwnProperty('ORANGE_USERNAME') || !process.env.hasOwnProperty('ORANGE_USER_PASSWORD')) {
     throw new Error('Error: ORANGE_USERNAME or ORANGE_USER_PASSWORD environment variables are not defined.');
@@ -41,9 +42,8 @@ const convertToJSON = (buffer) => {
 async function downloadDailyReports(selectorDate) {
   const downloadSelector = `a[href="./Daily-ChannelUserTransactionReport-0328965189-${selectorDate}.xls"]`;
 
-  const browser = await launch({
-    headless: false
-  });
+  const browser = await launch();
+
   const page = await browser.newPage();
 
   await login(page);
